@@ -1,0 +1,629 @@
+<!DOCTYPE html>
+<html lang="en" class="light">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cooling Load Calculator</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+        }
+    </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body
+    class="bg-slate-50 text-slate-800 font-sans antialiased dark:bg-slate-900 dark:text-slate-100 transition-colors duration-200">
+
+    <!-- Header -->
+    <header
+        class="bg-slate-900 text-white py-6 shadow-lg print:bg-white print:text-black print:shadow-none dark:bg-slate-950">
+        <div class="container mx-auto px-6 flex flex-col md:flex-row justify-between items-center gap-4">
+            <div class="flex flex-col items-center md:items-start">
+                <img id="companyLogoDisplay" class="h-20 w-auto hidden mb-4 object-contain" alt="Company Logo">
+                <h1 class="text-3xl font-bold tracking-tight">Cooling Load Calculator</h1>
+                <p class="text-slate-400 text-sm mt-1 print:text-slate-600">Refrigeration & Air Conditioning Design</p>
+            </div>
+
+            <!-- Toolbar -->
+            <div class="flex items-center gap-3 no-print">
+                <input type="file" id="loadProjectInput" accept=".json" class="hidden" onchange="loadProject(this)">
+
+                <button onclick="document.getElementById('loadProjectInput').click()"
+                    class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
+                    title="Load Project">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                    </svg>
+                </button>
+
+                <button onclick="saveProject()"
+                    class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white transition-colors border border-slate-700"
+                    title="Save Project">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4" />
+                    </svg>
+                </button>
+
+                <div class="h-6 w-px bg-slate-700 mx-1"></div>
+
+                <button onclick="toggleTheme()"
+                    class="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-yellow-400 hover:text-yellow-300 transition-colors border border-slate-700"
+                    title="Toggle Dark Mode">
+                    <!-- Sun Icon -->
+                    <svg id="sunIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 hidden" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                    </svg>
+                    <!-- Moon Icon -->
+                    <svg id="moonIcon" xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none"
+                        viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8 pb-24 print:py-4">
+
+        <!-- Form -->
+        <form id="calculatorForm" class="space-y-8 print:space-y-4">
+
+            <!-- Section 1: General Information -->
+            <section
+                class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                <div
+                    class="bg-slate-100 px-6 py-4 border-b border-slate-200 print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                    <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">1. General Information</h2>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 print:gap-4 print:p-4">
+                    <div class="form-group no-print">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">Company
+                            Logo</label>
+                        <input type="file" id="logoUpload" accept="image/*"
+                            class="w-full text-sm text-slate-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100 dark:file:bg-slate-600 dark:file:text-slate-200 dark:text-slate-400">
+                    </div>
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">Place
+                            Name</label>
+                        <input type="text" id="placeName"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                            placeholder="e.g. Warehouse A">
+                    </div>
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">Freon
+                            Type</label>
+                        <input type="text" id="freonType"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white"
+                            placeholder="e.g. R-134a">
+                    </div>
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">Volume of Room
+                            (m³)</label>
+                        <input type="number" id="roomVolume" step="0.01"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                    </div>
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">T_outside
+                            (°C)</label>
+                        <input type="number" id="tOutside" step="0.1"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                    </div>
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">T_wet bulb
+                            (°C)</label>
+                        <input type="number" id="tWetBulb" step="0.1"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                    </div>
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">T_Room
+                            (°C)</label>
+                        <input type="number" id="tRoom" step="0.1"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                    </div>
+                    <div class="form-group">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">T_Ground
+                            (°C)</label>
+                        <input type="number" id="tGround" step="0.1"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                    </div>
+                    <div class="form-group flex items-center h-full pt-6">
+                        <input type="checkbox" id="isGroundFloor"
+                            class="h-5 w-5 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:bg-slate-700 dark:border-slate-600">
+                        <label for="isGroundFloor" class="ml-2 block text-sm text-slate-700 dark:text-slate-300">Is the
+                            warehouse on the Ground Floor?</label>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Section 2: L1 Product Load -->
+            <section
+                class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                <div
+                    class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                    <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">2. L1 - Product Load</h2>
+                    <label class="flex items-center cursor-pointer no-print">
+                        <span class="mr-2 text-sm text-slate-600 font-medium dark:text-slate-400">Include</span>
+                        <input type="checkbox" id="toggleL1"
+                            class="toggle-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                            checked onchange="toggleSection('contentL1', this.checked)">
+                    </label>
+                </div>
+                <div id="contentL1"
+                    class="p-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 transition-opacity duration-200 print:p-4 print:gap-4">
+                    <div class="form-group col-span-1 md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">Product
+                            Name</label>
+                        <input type="text" id="productName"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                    </div>
+                    <div class="form-group col-span-1 md:col-span-2">
+                        <label class="block text-sm font-medium text-slate-600 mb-1 dark:text-slate-400">Product
+                            State</label>
+                        <select id="productState"
+                            class="w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm p-2 border print:appearance-none print:border-none print:p-0 print:font-bold dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                            <option value="1">1 - Fresh & Stored Fresh</option>
+                            <option value="2">2 - Fresh & Stored Frozen</option>
+                            <option value="3">3 - Frozen & Stored Frozen</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">cp_fresh
+                            (kJ/kg.K)</label><input type="number" id="cpFresh" step="0.01"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">cp_frozen
+                            (kJ/kg.K)</label><input type="number" id="cpFrozen" step="0.01"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">Latent Heat
+                            (kJ/kg)</label><input type="number" id="latentHeat" step="0.1"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">Q_respiration
+                            (W/kg)</label><input type="number" id="qRespiration" step="0.001"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">T_1
+                            (°C)</label><input type="number" id="t1" step="0.1"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">T_2
+                            (°C)</label><input type="number" id="t2" step="0.1"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">T_f (Freezing
+                            Point) (°C)</label><input type="number" id="tf" step="0.1"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">Time
+                            (hr)</label><input type="number" id="timeL1" step="0.1"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">Occupied
+                            Volume Rate (%)</label><input type="number" id="occupiedRate" step="1"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    <div class="form-group"><label
+                            class="block text-xs font-medium text-slate-500 uppercase dark:text-slate-500">Storing Rate
+                            (%)</label><input type="number" id="storingRate" step="1"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                </div>
+            </section>
+
+            <!-- Section 3: L2 Transmission Load -->
+            <section
+                class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                <div
+                    class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                    <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">3. L2 - Transmission Load</h2>
+                    <label class="flex items-center cursor-pointer no-print">
+                        <span class="mr-2 text-sm text-slate-600 font-medium dark:text-slate-400">Include</span>
+                        <input type="checkbox" id="toggleL2"
+                            class="toggle-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                            checked onchange="toggleSection('contentL2', this.checked)">
+                    </label>
+                </div>
+                <div id="contentL2" class="p-6 overflow-x-auto transition-opacity duration-200 print:p-4">
+                    <table class="min-w-full divide-y divide-slate-200 text-sm text-left dark:divide-slate-700">
+                        <thead class="bg-slate-50 print:bg-white dark:bg-slate-700">
+                            <tr>
+                                <th class="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">Direction</th>
+                                <th class="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">U (W/m².K)</th>
+                                <th class="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">Area (m²)</th>
+                                <th class="px-4 py-3 font-medium text-slate-700 dark:text-slate-300">DT_solar (°C)</th>
+                                <th class="px-4 py-3 font-medium text-slate-500 italic dark:text-slate-400">DT_Total
+                                </th>
+                                <th class="px-4 py-3 font-medium text-slate-500 italic dark:text-slate-400">Q (W)</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200 dark:divide-slate-700" id="l2TableBody">
+                            <!-- Rows -->
+                            <tr data-row="north">
+                                <td class="px-4 py-2 font-medium dark:text-slate-300">North Wall</td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-u print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-area print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.1"
+                                        class="w-24 p-1 border rounded l2-dt-solar print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2 text-slate-500 l2-dt-total dark:text-slate-400">-</td>
+                                <td class="px-4 py-2 text-slate-500 l2-q dark:text-slate-400">-</td>
+                            </tr>
+                            <tr data-row="south">
+                                <td class="px-4 py-2 font-medium dark:text-slate-300">South Wall</td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-u print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-area print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.1"
+                                        class="w-24 p-1 border rounded l2-dt-solar print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2 text-slate-500 l2-dt-total dark:text-slate-400">-</td>
+                                <td class="px-4 py-2 text-slate-500 l2-q dark:text-slate-400">-</td>
+                            </tr>
+                            <tr data-row="east">
+                                <td class="px-4 py-2 font-medium dark:text-slate-300">East Wall</td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-u print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-area print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.1"
+                                        class="w-24 p-1 border rounded l2-dt-solar print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2 text-slate-500 l2-dt-total dark:text-slate-400">-</td>
+                                <td class="px-4 py-2 text-slate-500 l2-q dark:text-slate-400">-</td>
+                            </tr>
+                            <tr data-row="west">
+                                <td class="px-4 py-2 font-medium dark:text-slate-300">West Wall</td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-u print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-area print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.1"
+                                        class="w-24 p-1 border rounded l2-dt-solar print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2 text-slate-500 l2-dt-total dark:text-slate-400">-</td>
+                                <td class="px-4 py-2 text-slate-500 l2-q dark:text-slate-400">-</td>
+                            </tr>
+                            <tr data-row="ceiling">
+                                <td class="px-4 py-2 font-medium dark:text-slate-300">Ceiling</td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-u print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-area print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.1"
+                                        class="w-24 p-1 border rounded l2-dt-solar print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2 text-slate-500 l2-dt-total dark:text-slate-400">-</td>
+                                <td class="px-4 py-2 text-slate-500 l2-q dark:text-slate-400">-</td>
+                            </tr>
+                            <tr data-row="floor">
+                                <td class="px-4 py-2 font-medium dark:text-slate-300">Floor/Ground</td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-u print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.01"
+                                        class="w-24 p-1 border rounded l2-area print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2"><input type="number" step="0.1"
+                                        class="w-24 p-1 border rounded l2-dt-solar print:border-none print:p-0 print:w-auto dark:bg-slate-700 dark:border-slate-600 dark:text-white">
+                                </td>
+                                <td class="px-4 py-2 text-slate-500 l2-dt-total dark:text-slate-400">-</td>
+                                <td class="px-4 py-2 text-slate-500 l2-q dark:text-slate-400">-</td>
+                            </tr>
+                            <tr class="bg-slate-100 font-bold print:bg-white dark:bg-slate-700">
+                                <td class="px-4 py-2 dark:text-slate-200">Summation</td>
+                                <td colspan="4"></td>
+                                <td class="px-4 py-2 text-blue-700 dark:text-blue-400" id="l2SumQ">-</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </section>
+
+            <!-- Section 4: Other Loads (L3 - L8) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 print:grid-cols-2 print:gap-4">
+
+                <!-- L3 Air Change -->
+                <section
+                    class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                    <div
+                        class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                        <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">4. L3 - Air Change</h2>
+                        <label class="flex items-center cursor-pointer no-print">
+                            <input type="checkbox" id="toggleL3"
+                                class="toggle-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                                checked onchange="toggleSection('contentL3', this.checked)">
+                        </label>
+                    </div>
+                    <div id="contentL3" class="p-6 space-y-4 transition-opacity duration-200 print:p-4">
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Density Outside
+                                (kg/m³)</label><input type="number" id="densityOutside" step="0.01"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Air Changes per
+                                Day</label><input type="number" id="airChanges" step="0.1"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">I_o (Enthalpy Outside)
+                                (kJ/kg)</label><input type="number" id="enthalpyOut" step="0.1"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">I_R (Enthalpy Room)
+                                (kJ/kg)</label><input type="number" id="enthalpyRoom" step="0.1"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    </div>
+                </section>
+
+                <!-- L4 Respiration (Derived from L1 Mass) -->
+                <section
+                    class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                    <div
+                        class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                        <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">5. L4 - Respiration</h2>
+                        <label class="flex items-center cursor-pointer no-print">
+                            <input type="checkbox" id="toggleL4"
+                                class="toggle-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                                checked onchange="toggleSection('contentL4', this.checked)">
+                        </label>
+                    </div>
+                    <div id="contentL4" class="p-6 space-y-4 transition-opacity duration-200 print:p-4">
+                        <p class="text-sm text-slate-500 mb-2 dark:text-slate-400">Calculated using Mass from L1 and
+                            Q_respiration.</p>
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Q_respiration
+                                (W/kg)</label><input type="number" id="qRespirationL4" step="0.001"
+                                class="input-field print:border-none print:p-0 print:font-bold"
+                                placeholder="Auto-filled from L1" disabled></div>
+                    </div>
+                </section>
+
+                <!-- L5 Workers -->
+                <section
+                    class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                    <div
+                        class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                        <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">6. L5 - Workers</h2>
+                        <label class="flex items-center cursor-pointer no-print">
+                            <input type="checkbox" id="toggleL5"
+                                class="toggle-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                                checked onchange="toggleSection('contentL5', this.checked)">
+                        </label>
+                    </div>
+                    <div id="contentL5" class="p-6 space-y-4 transition-opacity duration-200 print:p-4">
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Number of
+                                Workers</label><input type="number" id="numWorkers"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Heat Gained per Worker
+                                (W)</label><input type="number" id="heatPerWorker"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Hours in Room</label><input
+                                type="number" id="workerHours" step="0.5"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    </div>
+                </section>
+
+                <!-- L6 Lighting -->
+                <section
+                    class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                    <div
+                        class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                        <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">7. L6 - Lighting</h2>
+                        <label class="flex items-center cursor-pointer no-print">
+                            <input type="checkbox" id="toggleL6"
+                                class="toggle-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                                checked onchange="toggleSection('contentL6', this.checked)">
+                        </label>
+                    </div>
+                    <div id="contentL6" class="p-6 space-y-4 transition-opacity duration-200 print:p-4">
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Intensity of Light
+                                (W/m²)</label><input type="number" id="lightIntensity" step="0.1"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Hours Lighting
+                                Used</label><input type="number" id="lightHours" step="0.5"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                        <p class="text-xs text-slate-400 mt-2 print:hidden dark:text-slate-500">*Uses Floor Area from L2
+                        </p>
+                    </div>
+                </section>
+
+                <!-- L7 Machine -->
+                <section
+                    class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                    <div
+                        class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                        <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">8. L7 - Machine</h2>
+                        <label class="flex items-center cursor-pointer no-print">
+                            <input type="checkbox" id="toggleL7"
+                                class="toggle-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                                checked onchange="toggleSection('contentL7', this.checked)">
+                        </label>
+                    </div>
+                    <div id="contentL7" class="p-6 space-y-4 transition-opacity duration-200 print:p-4">
+                        <div class="form-group"><label class="label-sm dark:text-slate-400">Machine Power
+                                (kW)</label><input type="number" id="machinePower" step="0.1"
+                                class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    </div>
+                </section>
+
+                <!-- L8 Heating -->
+                <section
+                    class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                    <div
+                        class="bg-slate-100 px-6 py-4 border-b border-slate-200 flex justify-between items-center print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                        <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">9. L8 - Heating</h2>
+                        <label class="flex items-center cursor-pointer no-print">
+                            <input type="checkbox" id="toggleL8"
+                                class="toggle-checkbox h-5 w-5 text-blue-600 rounded focus:ring-blue-500 dark:bg-slate-600 dark:border-slate-500"
+                                checked onchange="toggleSection('contentL8', this.checked)">
+                        </label>
+                    </div>
+                    <div id="contentL8" class="p-6 space-y-4 transition-opacity duration-200 print:p-4">
+                        <p class="text-sm text-slate-500 mb-2 dark:text-slate-400">Calculated based on Floor Area and
+                            Ground status.</p>
+                        <div class="text-xs text-slate-400 print:hidden dark:text-slate-500">
+                            Condition: (Ground Floor) AND (Product NOT Fresh/Fresh)
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- Section 5: Compressor & Safety -->
+            <section
+                class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden print:shadow-none print:border-slate-300 print:break-inside-avoid dark:bg-slate-800 dark:border-slate-700">
+                <div
+                    class="bg-slate-100 px-6 py-4 border-b border-slate-200 print:bg-slate-50 dark:bg-slate-700 dark:border-slate-600">
+                    <h2 class="text-lg font-semibold text-slate-700 dark:text-slate-200">10. Compressor & Safety</h2>
+                </div>
+                <div class="p-6 grid grid-cols-1 md:grid-cols-2 gap-6 print:p-4">
+                    <div class="form-group"><label class="label-sm dark:text-slate-400">Compressor Working Hours
+                            (hr)</label><input type="number" id="compressorHours" step="0.5"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                    <div class="form-group"><label class="label-sm dark:text-slate-400">Safety Factor</label><input
+                            type="number" id="safetyFactor" step="0.05" value="1.1"
+                            class="input-field print:border-none print:p-0 print:font-bold"></div>
+                </div>
+            </section>
+
+            <!-- Action Buttons -->
+            <div class="flex flex-col sm:flex-row gap-4 justify-center pt-4 no-print">
+                <button type="button" onclick="calculateAll()"
+                    class="px-8 py-3 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg shadow-md transition-colors text-lg flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+                    </svg>
+                    Calculate Loads
+                </button>
+                <button type="button" onclick="exportToExcel()"
+                    class="px-8 py-3 bg-green-600 hover:bg-green-700 text-white font-bold rounded-lg shadow-md transition-colors text-lg flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    Export to Excel
+                </button>
+                <button type="button" onclick="window.print()"
+                    class="px-8 py-3 bg-slate-700 hover:bg-slate-800 text-white font-bold rounded-lg shadow-md transition-colors text-lg flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                    </svg>
+                    Print / Save PDF
+                </button>
+            </div>
+
+            <!-- Results Section -->
+            <div id="resultsSection"
+                class="hidden mt-12 border-t-2 border-slate-200 pt-12 print:block print:mt-6 print:pt-6 print:border-slate-300 dark:border-slate-700">
+                <h2
+                    class="text-2xl font-bold text-slate-800 mb-6 text-center print:text-left print:text-xl dark:text-white">
+                    Calculation Results</h2>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8 print:grid-cols-4 print:gap-2">
+                    <div
+                        class="result-card bg-blue-50 border border-blue-100 p-4 rounded-lg print:bg-white print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                        <div class="text-sm text-blue-600 font-medium print:text-slate-600 dark:text-blue-400">L1
+                            Product Load</div>
+                        <div class="text-2xl font-bold text-slate-800 print:text-lg dark:text-white" id="resL1">0.00 kW
+                        </div>
+                    </div>
+                    <div
+                        class="result-card bg-blue-50 border border-blue-100 p-4 rounded-lg print:bg-white print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                        <div class="text-sm text-blue-600 font-medium print:text-slate-600 dark:text-blue-400">L2
+                            Transmission</div>
+                        <div class="text-2xl font-bold text-slate-800 print:text-lg dark:text-white" id="resL2">0.00 kW
+                        </div>
+                    </div>
+                    <div
+                        class="result-card bg-blue-50 border border-blue-100 p-4 rounded-lg print:bg-white print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                        <div class="text-sm text-blue-600 font-medium print:text-slate-600 dark:text-blue-400">L3 Air
+                            Change</div>
+                        <div class="text-2xl font-bold text-slate-800 print:text-lg dark:text-white" id="resL3">0.00 kW
+                        </div>
+                    </div>
+                    <div
+                        class="result-card bg-blue-50 border border-blue-100 p-4 rounded-lg print:bg-white print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                        <div class="text-sm text-blue-600 font-medium print:text-slate-600 dark:text-blue-400">L4
+                            Respiration</div>
+                        <div class="text-2xl font-bold text-slate-800 print:text-lg dark:text-white" id="resL4">0.00 kW
+                        </div>
+                    </div>
+                    <div
+                        class="result-card bg-blue-50 border border-blue-100 p-4 rounded-lg print:bg-white print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                        <div class="text-sm text-blue-600 font-medium print:text-slate-600 dark:text-blue-400">L5
+                            Workers</div>
+                        <div class="text-2xl font-bold text-slate-800 print:text-lg dark:text-white" id="resL5">0.00 kW
+                        </div>
+                    </div>
+                    <div
+                        class="result-card bg-blue-50 border border-blue-100 p-4 rounded-lg print:bg-white print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                        <div class="text-sm text-blue-600 font-medium print:text-slate-600 dark:text-blue-400">L6
+                            Lighting</div>
+                        <div class="text-2xl font-bold text-slate-800 print:text-lg dark:text-white" id="resL6">0.00 kW
+                        </div>
+                    </div>
+                    <div
+                        class="result-card bg-blue-50 border border-blue-100 p-4 rounded-lg print:bg-white print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                        <div class="text-sm text-blue-600 font-medium print:text-slate-600 dark:text-blue-400">L7
+                            Machines</div>
+                        <div class="text-2xl font-bold text-slate-800 print:text-lg dark:text-white" id="resL7">0.00 kW
+                        </div>
+                    </div>
+                    <div
+                        class="result-card bg-blue-50 border border-blue-100 p-4 rounded-lg print:bg-white print:border-slate-300 dark:bg-slate-800 dark:border-slate-700">
+                        <div class="text-sm text-blue-600 font-medium print:text-slate-600 dark:text-blue-400">L8
+                            Heating</div>
+                        <div class="text-2xl font-bold text-slate-800 print:text-lg dark:text-white" id="resL8">0.00 kW
+                        </div>
+                    </div>
+                </div>
+
+                <div
+                    class="bg-slate-900 text-white rounded-xl p-8 max-w-2xl mx-auto text-center shadow-xl print:bg-white print:text-black print:border print:border-slate-800 print:shadow-none dark:bg-slate-950">
+                    <div class="mb-6">
+                        <div class="text-slate-400 text-sm uppercase tracking-wider font-semibold print:text-slate-600">
+                            Total Load (L_TOT)</div>
+                        <div class="text-4xl font-bold mt-2" id="resTotal">0.00 kW</div>
+                    </div>
+                    <div class="border-t border-slate-700 pt-6 print:border-slate-300 dark:border-slate-800">
+                        <div class="text-blue-400 text-sm uppercase tracking-wider font-semibold print:text-black">
+                            Required Capacity (RC)</div>
+                        <div class="text-5xl font-bold mt-2 text-blue-400 print:text-black" id="resRC">0.00 kW</div>
+                        <p class="text-slate-500 text-xs mt-2 print:text-slate-600">Includes Safety Factor & Compressor
+                            Runtime</p>
+                    </div>
+                </div>
+            </div>
+
+        </form>
+    </main>
+
+    <script src="script.js"></script>
+</body>
+
+</html>
