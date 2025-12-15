@@ -159,7 +159,7 @@ function calculateAll() {
 
         // Determine Density
         let density = 0;
-        if (state === "1") density = 500;
+        if (state === "1" || state === "2") density = 500;
         else density = 650;
 
         // Mass Calculation
