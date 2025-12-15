@@ -308,40 +308,165 @@ function calculateAll() {
 }
 
 function exportToExcel() {
-    // Gather all data
     const wb = XLSX.utils.book_new();
+    const allData = [];
 
-    // 1. Inputs Sheet
-    const inputsData = [
-        ["Parameter", "Value", "Unit"],
-        ["Place Name", document.getElementById('placeName').value, ""],
-        ["Freon Type", document.getElementById('freonType').value, ""],
-        ["Room Volume", getVal('roomVolume'), "m³"],
-        ["T_Outside", getVal('tOutside'), "°C"],
-        ["T_Room", getVal('tRoom'), "°C"],
-        ["Product State", document.getElementById('productState').options[document.getElementById('productState').selectedIndex].text, ""],
+    // Helper to add rows
+    const addHeader = (title) => {
+        allData.push([""]); // Empty row spacing
+        allData.push([title.toUpperCase()]);
+        allData.push(["Parameter", "Value", "Unit", "Notes"]);
+    };
+    const addRow = (param, val, unit = "", note = "") => allData.push([param, val, unit, note]);
+
+    // 1. General Information
+    addHeader("1. General Information");
+    addRow("Place Name", document.getElementById('placeName').value);
+    addRow("Freon Type", document.getElementById('freonType').value);
+    addRow("Room Volume", getVal('roomVolume'), "m³");
+    addRow("T_Outside", getVal('tOutside'), "°C");
+    addRow("T_Wet Bulb", getVal('tWetBulb'), "°C");
+    addRow("T_Room", getVal('tRoom'), "°C");
+    addRow("T_Ground", getVal('tGround'), "°C");
+    addRow("Ground Floor", document.getElementById('isGroundFloor').checked ? "Yes" : "No");
+
+    // 2. L1 Product Load
+    addHeader("2. L1 - Product Load");
+    if (document.getElementById('toggleL1').checked) {
+        const productStateSelect = document.getElementById('productState');
+        addRow("Product Name", document.getElementById('productName').value);
+        addRow("Product State", productStateSelect.options[productStateSelect.selectedIndex].text);
+        addRow("cp_fresh", getVal('cpFresh'), "kJ/kg.K");
+        addRow("cp_frozen", getVal('cpFrozen'), "kJ/kg.K");
+        addRow("Latent Heat", getVal('latentHeat'), "kJ/kg");
+        addRow("Q_respiration", getVal('qRespiration'), "W/kg");
+        addRow("T1", getVal('t1'), "°C");
+        addRow("T2", getVal('t2'), "°C");
+        addRow("Tf (Freezing Point)", getVal('tf'), "°C");
+        addRow("Time", getVal('timeL1'), "hr");
+        addRow("Occupied Volume Rate", getVal('occupiedRate'), "%");
+        addRow("Storing Rate", getVal('storingRate'), "%");
+
+        // Calculate Mass for display
+        let density = 0;
+        const state = productStateSelect.value;
+        if (state === "1" || state === "2") density = 500; else density = 650;
+        const mass = (getVal('occupiedRate') / 100) * (getVal('storingRate') / 100) * density * getVal('roomVolume');
+        addRow("Calculated Mass", mass.toFixed(2), "kg", `Density used: ${density} kg/m³`);
+
+        addRow("L1 Result", document.getElementById('resL1').innerText, "");
+    } else {
+        addRow("Status", "Excluded");
+    }
+
+    // 3. L2 Transmission Load
+    addHeader("3. L2 - Transmission Load");
+    if (document.getElementById('toggleL2').checked) {
+        // Table Header for L2
+        allData.push(["Direction", "U (W/m².K)", "Area (m²)", "DT_solar", "DT_total", "Q (W)"]);
+
+        const rows = ['north', 'south', 'east', 'west', 'ceiling', 'floor'];
+        rows.forEach(row => {
+            const tr = document.querySelector(`tr[data-row="${row}"]`);
+            if (tr) {
+                const name = tr.querySelector('td:first-child').innerText;
+                const u = tr.querySelector('.l2-u').value;
+                const area = tr.querySelector('.l2-area').value;
+                const dtSolar = tr.querySelector('.l2-dt-solar').value;
+                const dtTotal = tr.querySelector('.l2-dt-total').innerText;
+                const q = tr.querySelector('.l2-q').innerText;
+                allData.push([name, u, area, dtSolar, dtTotal, q]);
+            }
+        });
+
+        addRow("Total Heat Gain (Q)", document.getElementById('l2SumQ').innerText);
+        addRow("L2 Result", document.getElementById('resL2').innerText);
+    } else {
+        addRow("Status", "Excluded");
+    }
+
+    // 4. L3 Air Change
+    addHeader("4. L3 - Air Change Load");
+    if (document.getElementById('toggleL3').checked) {
+        addRow("Density Outside", getVal('densityOutside'), "kg/m³");
+        addRow("Air Changes per Day", getVal('airChanges'));
+        addRow("Enthalpy Outside (Io)", getVal('enthalpyOut'), "kJ/kg");
+        addRow("Enthalpy Room (Ir)", getVal('enthalpyRoom'), "kJ/kg");
+        addRow("L3 Result", document.getElementById('resL3').innerText);
+    } else {
+        addRow("Status", "Excluded");
+    }
+
+    // 5. L4 Respiration
+    addHeader("5. L4 - Respiration Load");
+    if (document.getElementById('toggleL4').checked) {
+        addRow("Q_respiration", getVal('qRespirationL4'), "W/kg");
+        addRow("L4 Result", document.getElementById('resL4').innerText);
+    } else {
+        addRow("Status", "Excluded");
+    }
+
+    // 6. L5 Workers
+    addHeader("6. L5 - Workers Load");
+    if (document.getElementById('toggleL5').checked) {
+        addRow("Number of Workers", getVal('numWorkers'));
+        addRow("Heat per Worker", getVal('heatPerWorker'), "W");
+        addRow("Hours in Room", getVal('workerHours'), "hr");
+        addRow("L5 Result", document.getElementById('resL5').innerText);
+    } else {
+        addRow("Status", "Excluded");
+    }
+
+    // 7. L6 Lighting
+    addHeader("7. L6 - Lighting Load");
+    if (document.getElementById('toggleL6').checked) {
+        addRow("Light Intensity", getVal('lightIntensity'), "W/m²");
+        addRow("Hours Lighting Used", getVal('lightHours'), "hr");
+        addRow("L6 Result", document.getElementById('resL6').innerText);
+    } else {
+        addRow("Status", "Excluded");
+    }
+
+    // 8. L7 Machine
+    addHeader("8. L7 - Machine Load");
+    if (document.getElementById('toggleL7').checked) {
+        addRow("Machine Power", getVal('machinePower'), "kW");
+        addRow("L7 Result", document.getElementById('resL7').innerText);
+    } else {
+        addRow("Status", "Excluded");
+    }
+
+    // 9. L8 Heating
+    addHeader("9. L8 - Heating Load");
+    if (document.getElementById('toggleL8').checked) {
+        addRow("L8 Result", document.getElementById('resL8').innerText);
+    } else {
+        addRow("Status", "Excluded");
+    }
+
+    // 10. Compressor & Safety
+    addHeader("10. Compressor & Safety");
+    addRow("Compressor Working Hours", getVal('compressorHours'), "hr");
+    addRow("Safety Factor", getVal('safetyFactor'));
+
+    // 11. Final Results
+    addHeader("11. CALCULATION RESULTS");
+    addRow("TOTAL LOAD (L_TOT)", document.getElementById('resTotal').innerText);
+    addRow("REQUIRED CAPACITY (RC)", document.getElementById('resRC').innerText);
+
+    // Create Sheet
+    const ws = XLSX.utils.aoa_to_sheet(allData);
+
+    // Basic Column Widths
+    ws['!cols'] = [
+        { wch: 30 }, // Parameter
+        { wch: 15 }, // Value
+        { wch: 15 }, // Unit
+        { wch: 25 }, // Notes/Extra
+        { wch: 15 }, // Extra
+        { wch: 15 }  // Extra
     ];
-    const wsInputs = XLSX.utils.aoa_to_sheet(inputsData);
-    XLSX.utils.book_append_sheet(wb, wsInputs, "Inputs");
 
-    // 2. Loads Sheet
-    const loadsData = [
-        ["Load Component", "Value (kW)"],
-        ["L1 - Product Load", document.getElementById('resL1').innerText],
-        ["L2 - Transmission Load", document.getElementById('resL2').innerText],
-        ["L3 - Air Change Load", document.getElementById('resL3').innerText],
-        ["L4 - Respiration Load", document.getElementById('resL4').innerText],
-        ["L5 - Workers Load", document.getElementById('resL5').innerText],
-        ["L6 - Lighting Load", document.getElementById('resL6').innerText],
-        ["L7 - Machine Load", document.getElementById('resL7').innerText],
-        ["L8 - Heating Load", document.getElementById('resL8').innerText],
-        ["", ""],
-        ["TOTAL LOAD", document.getElementById('resTotal').innerText],
-        ["REQUIRED CAPACITY (RC)", document.getElementById('resRC').innerText]
-    ];
-    const wsLoads = XLSX.utils.aoa_to_sheet(loadsData);
-    XLSX.utils.book_append_sheet(wb, wsLoads, "Results");
-
-    // Save
-    XLSX.writeFile(wb, "Cooling_Load_Report.xlsx");
+    XLSX.utils.book_append_sheet(wb, ws, "Detailed Report");
+    XLSX.writeFile(wb, "Cooling_Load_Detailed_Report.xlsx");
 }
